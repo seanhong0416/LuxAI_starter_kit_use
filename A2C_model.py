@@ -14,10 +14,9 @@ lr_actor = 0.01
 lr_critic = 0.01
 gamma = 0.99
 episodes_per_update = 1
-num_of_actor_additional_condition = 
-num_of_critic_additional_condition = 
-num_of_actions = 
-
+num_of_actor_additional_condition = 6
+num_of_critic_additional_condition = 4
+num_of_actions = 13
 
 class A2C_Net(nn.module):
     def __init__(self):
@@ -39,6 +38,16 @@ class A2C_Net(nn.module):
         )
 
         self.actor = nn.sequential(
-            nn.Linear(1006,100),
-            nn.Linear(100,)
+            nn.Linear(1000+num_of_actor_additional_condition,100),
+            nn.ReLU(),
+            nn.Linear(100,num_of_actions),
+            F.softmax(dim=-1),
+        )
+
+        self.critic = nn.Sequential(
+            nn.Linear(1000+num_of_critic_additional_condition,100),
+            nn.ReLU(),
+            nn.Linear(100,10),
+            nn.ReLU(),
+            nn.Linear(10,1),
         )
