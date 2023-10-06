@@ -51,3 +51,11 @@ class A2C_Net(nn.module):
             nn.ReLU(),
             nn.Linear(10,1),
         )
+    
+    def forward(self, maps, actor_input, critic_input):
+        conv_output = self.mutual_conv(maps)
+        actions = self.actor(conv_output)
+        value = self.critic(conv_output)
+
+        return actions, value
+    
