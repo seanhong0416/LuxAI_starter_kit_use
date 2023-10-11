@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torch.distributions import Categorical
 
 import numpy as np
 
@@ -49,9 +50,20 @@ class A2C_Net(nn.module):
         )
     
     def forward(self, maps, actor_input, critic_input):
-        conv_output = self.mutual_conv(maps)
-        actions = self.actor(conv_output)
-        value = self.critic(conv_output)
+        conv_input = torch.from_numpy(maps)
+        conv_output = self.mutual_conv(conv_input)
+
+        actions = {}
+        for unit_id, unit_data in actor_input.items():
+            actor_net_input = torch.cat((conv_output, torch.from_numpy(unit_data)))
+            probs = self.actor(actor_net_input)
+            probs = F.softmax(probs)
+            actions[unit_id] = Categorical(probs)
+
+        critic_net_input = torch.cat((conv_output, torch.from_numpy(critic_input)))
+        value = self.critic(critic_net_input)
 
         return actions, value
+    
+    
     

@@ -1,6 +1,7 @@
 from lux.kit import obs_to_game_state, GameState
 from lux.config import EnvConfig
 from lux.utils import direction_to, my_turn_to_place_factory
+from A2C_model import A2C_Net
 import numpy as np
 import sys
 
@@ -8,6 +9,7 @@ class A2C_Agent():
     def __init__(self,player:str,env_cfg:EnvConfig) -> None:
         self.player = player
         self.opp_player = "player_1" if self.player == "player_0" else "player_0"
+        self.a2c_net = A2C_Net()
         np.random.seed(0)
         self.env.cfg:EnvConfig = env_cfg
 
@@ -95,12 +97,12 @@ class A2C_Agent():
                 unit_map[tuple(unit.pos)] = 10
             else:
                 unit_map[tuple(unit.pos)] = 1
-            actor_additional_input[unit_id] = {'pos_x':unit.pos[0],
-                                               'pos_y':unit.pos[1],
-                                               'unit_type':unit.unit_type,
-                                               'power':unit.power,
-                                               'ice':unit.cargo.ice,
-                                               'metal':unit.cargo.ice}
+            actor_additional_input[unit_id] = np.array((unit.pos[0],
+                                                        unit.pos[1],
+                                                        unit.unit_type,
+                                                        unit.power,
+                                                        unit.cargo.ice,
+                                                        unit.cargo.ice))
         #get value of total_unit
         total_unit = np.sum(unit_map)
         enemy_units = game_state.units[self.opp_player]
@@ -131,7 +133,32 @@ class A2C_Agent():
                                unit_map
                                ))
         
-
+        net_output_action, net_output_value = self.a2c_net(maps, actor_additional_input, critic_additional_input)
+        for unit_id, action_code in net_output_action.items():
+            actions[unit_id] = [self.translate_action(ally_units[unit_id],action_code)]
         
+        return actions
 
+    def translate_action(self, unit, action_code):
+        recharge_amount = 0
+        if unit.unit_type == "LIGHT":
+            recharge_amount = 1
+        else:
+            recharge_amount = 10
+
+        action_dictionary = {0:unit.move(0),
+                             1:unit.move(1),
+                             2:unit.move(2),
+                             3:unit.move(3),
+                             4:unit.move(4),
+                             5:unit.transfer(1),
+                             6:unit.transfer(2),
+                             7:unit.transfer(3),
+                             8:unit.transfer(4),
+                             9:unit.dig(),
+                             10:unit.pickup(),
+                             11:unit.self_destruct(),
+                             12:unit.recharge(recharge_amount)}
+        
+        return action_dictionary[action_code]
     
